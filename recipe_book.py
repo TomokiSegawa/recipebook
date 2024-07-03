@@ -104,7 +104,7 @@ def main():
             if url and title:  # URLとタイトルが入力されているか確認
                 df, success, message = save_recipe(df, url, title, memo, ','.join(st.session_state.tags))
                 if success:
-                    st.success(message)
+                    st.success(message)  # 成功メッセージを緑色で表示
                     # タグリストを更新
                     all_tags = get_all_tags(df)
                     st.experimental_rerun()  # ページを再読み込みして最新のタグリストを反映
