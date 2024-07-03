@@ -25,7 +25,7 @@ def save_recipe(df):
     url = st.session_state.url
     title = st.session_state.title
     memo = st.session_state.memo
-    tags = ','.join(st.session_state.tags)  # リストを文字列に変換
+    tags = ','.join(st.session_state.tags)
 
     new_recipe = pd.DataFrame({
         'URL': [url],
@@ -39,11 +39,21 @@ def save_recipe(df):
     st.success('レシピが保存されました！')
     return df
 
+def get_all_tags(df):
+    all_tags = set()
+    for tags in df['タグ']:
+        if isinstance(tags, str):
+            all_tags.update(tag.strip() for tag in tags.split(','))
+    return list(all_tags)
+
 def main():
     st.title('レシピ管理アプリ')
 
     # レシピデータの読み込み
     df = load_recipes()
+
+    # 全てのタグを取得
+    all_tags = get_all_tags(df)
 
     # タブの作成
     tab1, tab2 = st.tabs(["レシピ追加", "レシピ一覧"])
@@ -61,25 +71,31 @@ def main():
         st.text_area('アレンジメモ：', key='memo')
         
         # タグの入力（チップ入力を使用）
-        st.session_state.tags = st_tags(
+        if 'tags' not in st.session_state:
+            st.session_state.tags = []
+
+        tags = st_tags(
             label='タグを入力してください:',
             text='エンターキーを押して追加',
-            value=[],
-            suggestions=['和食', '洋食', '中華', '簡単', '時短', 'ヘルシー'],  # サンプルのタグ候補
+            value=st.session_state.tags,
+            suggestions=all_tags,
             maxtags=10,
             key='tags'
         )
+
+        st.session_state.tags = tags
         
         # 保存ボタン
         if st.button('レシピを保存'):
             df = save_recipe(df)
+            # タグリストを更新
+            all_tags = get_all_tags(df)
 
     with tab2:
         st.header('保存したレシピ一覧')
         
         # タグでフィルタリング（複数選択可能）
-        all_tags = set(tag.strip() for tags in df['タグ'] for tag in tags.split(',') if tag)
-        selected_tags = st.multiselect('タグでフィルタリング（複数選択可能）', list(all_tags))
+        selected_tags = st.multiselect('タグでフィルタリング（複数選択可能）', all_tags)
         
         # レシピの表示
         if not selected_tags:  # タグが選択されていない場合は全てのレシピを表示
