@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_tags import st_tags
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -24,7 +25,7 @@ def save_recipe(df):
     url = st.session_state.url
     title = st.session_state.title
     memo = st.session_state.memo
-    tags = st.session_state.tags
+    tags = ','.join(st.session_state.tags)  # リストを文字列に変換
 
     new_recipe = pd.DataFrame({
         'URL': [url],
@@ -56,9 +57,18 @@ def main():
             title = get_webpage_title(url)
             st.text_input('ウェブページのタイトル：', value=title, key='title')
         
-        # メモとタグの入力
+        # メモの入力
         st.text_area('アレンジメモ：', key='memo')
-        st.text_input('タグ（コンマ区切り）：', key='tags')
+        
+        # タグの入力（チップ入力を使用）
+        st.session_state.tags = st_tags(
+            label='タグを入力してください:',
+            text='エンターキーを押して追加',
+            value=[],
+            suggestions=['和食', '洋食', '中華', '簡単', '時短', 'ヘルシー'],  # サンプルのタグ候補
+            maxtags=10,
+            key='tags'
+        )
         
         # 保存ボタン
         if st.button('レシピを保存'):
@@ -67,12 +77,15 @@ def main():
     with tab2:
         st.header('保存したレシピ一覧')
         
-        # タグでフィルタリング
+        # タグでフィルタリング（複数選択可能）
         all_tags = set(tag.strip() for tags in df['タグ'] for tag in tags.split(',') if tag)
-        selected_tag = st.selectbox('タグでフィルタリング', ['すべて表示'] + list(all_tags))
+        selected_tags = st.multiselect('タグでフィルタリング（複数選択可能）', list(all_tags))
         
         # レシピの表示
-        filtered_df = df if selected_tag == 'すべて表示' else df[df['タグ'].str.contains(selected_tag)]
+        if not selected_tags:  # タグが選択されていない場合は全てのレシピを表示
+            filtered_df = df
+        else:
+            filtered_df = df[df['タグ'].apply(lambda x: any(tag in x.split(',') for tag in selected_tags))]
         
         for _, recipe in filtered_df.iterrows():
             with st.expander(recipe['タイトル']):
