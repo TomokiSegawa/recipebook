@@ -22,7 +22,6 @@ def load_recipes():
     return pd.DataFrame(columns=['URL', 'タイトル', 'メモ', 'タグ'])
 
 def save_recipe(df, url, title, memo, tags):
-    # URLの重複チェック
     if url in df['URL'].values:
         return df, False, "このURLのレシピはすでに存在しています。"
 
@@ -50,8 +49,11 @@ def main():
     # レシピデータの読み込み
     df = load_recipes()
 
-    # 全てのタグを取得
-    all_tags = get_all_tags(df)
+    # 全てのタグを取得し、セッション状態のタグも含める
+    all_tags = set(get_all_tags(df))
+    if 'tags' in st.session_state:
+        all_tags.update(st.session_state.tags)
+    all_tags = list(all_tags)
 
     # タブの作成
     tab1, tab2 = st.tabs(["レシピ追加", "レシピ一覧"])
@@ -95,6 +97,7 @@ def main():
         # セッション状態の更新
         if combined_tags != st.session_state.tags:
             st.session_state.tags = combined_tags
+            st.experimental_rerun()  # タグが更新されたら再読み込み
         
         # 保存ボタン
         if st.button('レシピを保存'):
