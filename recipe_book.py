@@ -21,11 +21,10 @@ def load_recipes():
         return pd.read_csv(CSV_FILE)
     return pd.DataFrame(columns=['URL', 'タイトル', 'メモ', 'タグ'])
 
-def save_recipe(df):
-    url = st.session_state.url
-    title = st.session_state.title
-    memo = st.session_state.memo
-    tags = ','.join(st.session_state.tags)
+def save_recipe(df, url, title, memo, tags):
+    # URLの重複チェック
+    if url in df['URL'].values:
+        return df, False, "このURLのレシピはすでに存在しています。"
 
     new_recipe = pd.DataFrame({
         'URL': [url],
@@ -36,8 +35,7 @@ def save_recipe(df):
     
     df = pd.concat([df, new_recipe], ignore_index=True)
     df.to_csv(CSV_FILE, index=False)
-    st.success('レシピが保存されました！')
-    return df
+    return df, True, "レシピが保存されました！"
 
 def get_all_tags(df):
     all_tags = set()
@@ -68,44 +66,61 @@ def main():
             st.text_input('ウェブページのタイトル：', value=title, key='title')
         
         # メモの入力
-        st.text_area('アレンジメモ：', key='memo')
+        memo = st.text_area('アレンジメモ：', key='memo')
         
-        # タグの入力（チップ入力を使用）
+        # タグの入力（既存タグの選択と新規入力の組み合わせ）
         if 'tags' not in st.session_state:
             st.session_state.tags = []
 
-        # st_tags の結果を直接変数に代入
-        input_tags = st_tags(
-            label='タグを入力してください:',
-            text='エンターキーを押して追加',
-            value=st.session_state.tags,  # 初期値として現在のタグを使用
-            suggestions=all_tags,
-            maxtags=10,
-            key='tag_input'  # キーを変更
+        # 既存のタグから選択
+        selected_existing_tags = st.multiselect(
+            '既存のタグから選択:',
+            options=all_tags,
+            default=st.session_state.tags
         )
 
-        # セッション状態の更新（ウィジェットの外で行う）
-        if input_tags != st.session_state.tags:
-            st.session_state.tags = input_tags
+        # 新規タグの入力
+        new_tags = st_tags(
+            label='新しいタグを入力:',
+            text='エンターキーを押して追加',
+            value=[tag for tag in st.session_state.tags if tag not in selected_existing_tags],
+            suggestions=[tag for tag in all_tags if tag not in selected_existing_tags],
+            maxtags=10,
+            key='new_tag_input'
+        )
+
+        # 既存のタグと新規タグを組み合わせる
+        combined_tags = list(set(selected_existing_tags + new_tags))
+        
+        # セッション状態の更新
+        if combined_tags != st.session_state.tags:
+            st.session_state.tags = combined_tags
         
         # 保存ボタン
         if st.button('レシピを保存'):
-            df = save_recipe(df)
-            # タグリストを更新
-            all_tags = get_all_tags(df)
-            st.experimental_rerun()  # ページを再読み込みして最新のタグリストを反映
+            if url and title:  # URLとタイトルが入力されているか確認
+                df, success, message = save_recipe(df, url, title, memo, ','.join(st.session_state.tags))
+                if success:
+                    st.success(message)
+                    # タグリストを更新
+                    all_tags = get_all_tags(df)
+                    st.experimental_rerun()  # ページを再読み込みして最新のタグリストを反映
+                else:
+                    st.error(message)
+            else:
+                st.error("URLとタイトルを入力してください。")
 
     with tab2:
         st.header('保存したレシピ一覧')
         
         # タグでフィルタリング（複数選択可能）
-        selected_tags = st.multiselect('タグでフィルタリング（複数選択可能）', all_tags)
+        selected_tags = st.multiselect('タグでフィルタリング（複数選択可能、AND条件）', all_tags)
         
-        # レシピの表示
+        # レシピの表示（AND条件でフィルタリング）
         if not selected_tags:  # タグが選択されていない場合は全てのレシピを表示
             filtered_df = df
         else:
-            filtered_df = df[df['タグ'].apply(lambda x: any(tag in x.split(',') for tag in selected_tags))]
+            filtered_df = df[df['タグ'].apply(lambda x: all(tag in x.split(',') for tag in selected_tags))]
         
         for _, recipe in filtered_df.iterrows():
             with st.expander(recipe['タイトル']):
