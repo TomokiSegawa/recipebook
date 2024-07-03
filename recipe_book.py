@@ -43,6 +43,12 @@ def get_all_tags(df):
             all_tags.update(tag.strip() for tag in tags.split(','))
     return list(all_tags)
 
+def clear_form():
+    st.session_state.url = ""
+    st.session_state.title = ""
+    st.session_state.memo = ""
+    st.session_state.tags = []
+
 def main():
     st.title('レシピ管理アプリ')
 
@@ -66,6 +72,8 @@ def main():
         if url:
             title = get_webpage_title(url)
             st.text_input('ウェブページのタイトル：', value=title, key='title')
+        else:
+            st.text_input('ウェブページのタイトル：', key='title')
         
         # メモの入力
         memo = st.text_area('アレンジメモ：', key='memo')
@@ -103,19 +111,13 @@ def main():
             if url and title:  # URLとタイトルが入力されているか確認
                 df, success, message = save_recipe(df, url, title, memo, ','.join(st.session_state.tags))
                 if success:
-                    st.session_state.save_success = True
-                    st.session_state.save_message = message
+                    st.success(message)
+                    clear_form()  # フォームをクリア
+                    st.experimental_rerun()  # ページを再読み込み
                 else:
                     st.error(message)
             else:
                 st.error("URLとタイトルを入力してください。")
-
-        # 成功メッセージの表示
-        if st.session_state.get('save_success', False):
-            st.success(st.session_state.save_message)
-            st.session_state.save_success = False
-            # タグリストを更新
-            all_tags = get_all_tags(df)
 
     with tab2:
         st.header('保存したレシピ一覧')
