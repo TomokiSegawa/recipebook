@@ -74,22 +74,26 @@ def main():
         if 'tags' not in st.session_state:
             st.session_state.tags = []
 
-        tags = st_tags(
+        # st_tags の結果を直接変数に代入
+        input_tags = st_tags(
             label='タグを入力してください:',
             text='エンターキーを押して追加',
-            value=st.session_state.tags,
+            value=st.session_state.tags,  # 初期値として現在のタグを使用
             suggestions=all_tags,
             maxtags=10,
-            key='tags'
+            key='tag_input'  # キーを変更
         )
 
-        st.session_state.tags = tags
+        # セッション状態の更新（ウィジェットの外で行う）
+        if input_tags != st.session_state.tags:
+            st.session_state.tags = input_tags
         
         # 保存ボタン
         if st.button('レシピを保存'):
             df = save_recipe(df)
             # タグリストを更新
             all_tags = get_all_tags(df)
+            st.experimental_rerun()  # ページを再読み込みして最新のタグリストを反映
 
     with tab2:
         st.header('保存したレシピ一覧')
