@@ -203,16 +203,16 @@ def main():
         if not selected_tags:  # タグが選択されていない場合は全てのレシピを表示
             filtered_df = df
         else:
-            filtered_df = df[df['タグ'].apply(lambda x: all(tag in x.split(',') for tag in selected_tags))]
+            filtered_df = df[df['タグ'].apply(lambda x: all(tag in str(x).split(',') for tag in selected_tags))]
         
         for index, recipe in filtered_df.iterrows():
             with tab2.expander(recipe['タイトル']):
                 st.write(f"URL: {recipe['URL']}")
                 st.write(f"メモ: {recipe['メモ']}")
                 st.write(f"タグ: {recipe['タグ']}")
-                if '画像URL' in recipe and recipe['画像URL']:
+                if 'img_url' in recipe and recipe['img_url']:
                     try:
-                        st.image(recipe['画像URL'], caption="レシピ画像", use_column_width=True)
+                        st.image(recipe['img_url'], caption="レシピ画像", use_column_width=True)
                     except Exception as e:
                         st.warning(f"画像の表示中にエラーが発生しました: {str(e)}")
                 else:
@@ -225,7 +225,7 @@ def main():
                         st.session_state.edit_url = recipe['URL']
                         st.session_state.edit_title = recipe['タイトル']
                         st.session_state.edit_memo = recipe['メモ']
-                        st.session_state.edit_tags = recipe['タグ'].split(',')
+                        st.session_state.edit_tags = str(recipe['タグ']).split(',')
                         st.experimental_rerun()
                 with col2:
                     if st.button('削除', key=f'delete_{index}'):
@@ -239,13 +239,10 @@ def main():
             edit_url = tab2.text_input('URL:', value=st.session_state.edit_url)
             edit_title = tab2.text_input('タイトル:', value=st.session_state.edit_title)
             edit_memo = tab2.text_area('メモ:', value=st.session_state.edit_memo)
-            edit_tags = st_tags(
-                label='タグ:',
-                text='エンターキーを押して追加',
-                value=st.session_state.edit_tags,
-                suggestions=all_tags,
-                maxtags=10,
-                key='edit_tags'
+            edit_tags = tab2.multiselect(
+                'タグ:',
+                options=all_tags,
+                default=st.session_state.edit_tags
             )
 
             if tab2.button('更新'):
