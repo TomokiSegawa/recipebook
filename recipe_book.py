@@ -98,21 +98,28 @@ def main():
     # レシピデータの読み込み
     df = load_recipes()
 
-    # 全てのタグを取得し、セッション状態のタグも含める
-    all_tags = set(get_all_tags(df))
-    if 'tags' in st.session_state:
-        all_tags.update(st.session_state.tags)
-    all_tags = list(all_tags)
-
     # セッション状態の初期化
+    if 'tags' not in st.session_state:
+        st.session_state.tags = []
+    if 'new_tags' not in st.session_state:
+        st.session_state.new_tags = []
     if 'show_success' not in st.session_state:
         st.session_state.show_success = False
     if 'success_message' not in st.session_state:
         st.session_state.success_message = ""
     if 'clear_form' not in st.session_state:
         st.session_state.clear_form = False
-    if 'new_tags' not in st.session_state:
-        st.session_state.new_tags = []
+    if 'url' not in st.session_state:
+        st.session_state.url = ""
+    if 'title' not in st.session_state:
+        st.session_state.title = ""
+    if 'memo' not in st.session_state:
+        st.session_state.memo = ""
+
+    # 全てのタグを取得し、セッション状態のタグも含める
+    all_tags = set(get_all_tags(df))
+    all_tags.update(st.session_state.tags)
+    all_tags = list(all_tags)
 
     # タブの作成
     tab1, tab2, tab3 = st.tabs(["レシピ追加", "レシピ一覧", "インポート/エクスポート"])
@@ -126,7 +133,7 @@ def main():
             st.session_state.show_success = False
 
         # URL入力
-        url = st.text_input('URLを入力してください：', value="" if st.session_state.clear_form else st.session_state.get('url', ""), key='url')
+        url = st.text_input('URLを入力してください：', value="" if st.session_state.clear_form else st.session_state.url, key='url')
         if url and not st.session_state.clear_form:
             title, img_url = get_webpage_info(url)
             st.text_input('ウェブページのタイトル：', value=title, key='title')
@@ -138,10 +145,10 @@ def main():
             else:
                 st.info("レシピ画像が見つかりませんでした。")
         else:
-            st.text_input('ウェブページのタイトル：', value="" if st.session_state.clear_form else st.session_state.get('title', ""), key='title')
+            st.text_input('ウェブページのタイトル：', value="" if st.session_state.clear_form else st.session_state.title, key='title')
         
         # メモの入力
-        memo = st.text_area('アレンジメモ：', value="" if st.session_state.clear_form else st.session_state.get('memo', ""), key='memo')
+        memo = st.text_area('アレンジメモ：', value="" if st.session_state.clear_form else st.session_state.memo, key='memo')
         
         # タグの入力（既存タグの選択と新規入力の組み合わせ）
         if st.session_state.clear_form:
@@ -189,6 +196,11 @@ def main():
         # フォームクリアフラグをリセット
         if st.session_state.clear_form:
             st.session_state.clear_form = False
+            st.session_state.url = ""
+            st.session_state.title = ""
+            st.session_state.memo = ""
+            st.session_state.tags = []
+            st.session_state.new_tags = []
 
     with tab2:
         st.header('保存したレシピ一覧')
