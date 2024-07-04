@@ -108,7 +108,7 @@ def main():
     if 'success_message' not in st.session_state:
         st.session_state.success_message = ""
     if 'form_data' not in st.session_state:
-        st.session_state.form_data = {"url": "", "title": "", "memo": ""}
+        st.session_state.form_data = {"url": "", "title": "", "memo": "", "img_url": None}
     if 'current_tab' not in st.session_state:
         st.session_state.current_tab = "レシピ追加"
 
@@ -133,6 +133,7 @@ def main():
         if url and url != st.session_state.form_data["url"]:
             title, img_url = get_webpage_info(url)
             st.session_state.form_data["title"] = title
+            st.session_state.form_data["img_url"] = img_url
             tab1.text_input('ウェブページのタイトル：', value=title, key='input_title')
             if img_url:
                 try:
@@ -174,11 +175,11 @@ def main():
         # 保存ボタン
         if tab1.button('レシピを保存'):
             if url and st.session_state.form_data["title"]:  # URLとタイトルが入力されているか確認
-                df, success, message = save_recipe(df, url, st.session_state.form_data["title"], memo, ','.join(combined_tags), img_url)
+                df, success, message = save_recipe(df, url, st.session_state.form_data["title"], memo, ','.join(combined_tags), st.session_state.form_data["img_url"])
                 if success:
                     st.session_state.show_success = True
                     st.session_state.success_message = message
-                    st.session_state.form_data = {"url": "", "title": "", "memo": ""}
+                    st.session_state.form_data = {"url": "", "title": "", "memo": "", "img_url": None}
                     st.session_state.tags = []
                     st.session_state.new_tags = []
                     st.experimental_rerun()
