@@ -91,6 +91,8 @@ def main():
         st.session_state.show_success = False
     if 'success_message' not in st.session_state:
         st.session_state.success_message = ""
+    if 'clear_form' not in st.session_state:
+        st.session_state.clear_form = False
 
     # タブの作成
     tab1, tab2, tab3 = st.tabs(["レシピ追加", "レシピ一覧", "インポート/エクスポート"])
@@ -104,32 +106,32 @@ def main():
             st.session_state.show_success = False
 
         # URL入力
-        url = st.text_input('URLを入力してください：', key='url')
-        if url:
+        url = st.text_input('URLを入力してください：', value="" if st.session_state.clear_form else st.session_state.get('url', ""), key='url')
+        if url and not st.session_state.clear_form:
             title = get_webpage_title(url)
             st.text_input('ウェブページのタイトル：', value=title, key='title')
         else:
-            st.text_input('ウェブページのタイトル：', key='title')
+            st.text_input('ウェブページのタイトル：', value="" if st.session_state.clear_form else st.session_state.get('title', ""), key='title')
         
         # メモの入力
-        memo = st.text_area('アレンジメモ：', key='memo')
+        memo = st.text_area('アレンジメモ：', value="" if st.session_state.clear_form else st.session_state.get('memo', ""), key='memo')
         
         # タグの入力（既存タグの選択と新規入力の組み合わせ）
-        if 'tags' not in st.session_state:
+        if 'tags' not in st.session_state or st.session_state.clear_form:
             st.session_state.tags = []
 
         # 既存のタグから選択
         selected_existing_tags = st.multiselect(
             '既存のタグから選択:',
             options=all_tags,
-            default=st.session_state.tags
+            default=[] if st.session_state.clear_form else st.session_state.tags
         )
 
         # 新規タグの入力
         new_tags = st_tags(
             label='新しいタグを入力:',
             text='エンターキーを押して追加',
-            value=[tag for tag in st.session_state.tags if tag not in selected_existing_tags],
+            value=[] if st.session_state.clear_form else [tag for tag in st.session_state.tags if tag not in selected_existing_tags],
             suggestions=[tag for tag in all_tags if tag not in selected_existing_tags],
             maxtags=10,
             key='new_tag_input'
@@ -149,16 +151,16 @@ def main():
                 if success:
                     st.session_state.show_success = True
                     st.session_state.success_message = message
-                    # フォームをクリア
-                    st.session_state.url = ""
-                    st.session_state.title = ""
-                    st.session_state.memo = ""
-                    st.session_state.tags = []
+                    st.session_state.clear_form = True
                     st.experimental_rerun()
                 else:
                     st.error(message)
             else:
                 st.error("URLとタイトルを入力してください。")
+
+        # フォームクリアフラグをリセット
+        if st.session_state.clear_form:
+            st.session_state.clear_form = False
 
     with tab2:
         st.header('保存したレシピ一覧')
