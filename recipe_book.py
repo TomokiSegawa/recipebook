@@ -111,6 +111,8 @@ def main():
         st.session_state.success_message = ""
     if 'clear_form' not in st.session_state:
         st.session_state.clear_form = False
+    if 'new_tags' not in st.session_state:
+        st.session_state.new_tags = []
 
     # タブの作成
     tab1, tab2, tab3 = st.tabs(["レシピ追加", "レシピ一覧", "インポート/エクスポート"])
@@ -142,21 +144,22 @@ def main():
         memo = st.text_area('アレンジメモ：', value="" if st.session_state.clear_form else st.session_state.get('memo', ""), key='memo')
         
         # タグの入力（既存タグの選択と新規入力の組み合わせ）
-        if 'tags' not in st.session_state or st.session_state.clear_form:
+        if st.session_state.clear_form:
             st.session_state.tags = []
+            st.session_state.new_tags = []
 
         # 既存のタグから選択
         selected_existing_tags = st.multiselect(
             '既存のタグから選択:',
             options=all_tags,
-            default=[] if st.session_state.clear_form else st.session_state.tags
+            default=st.session_state.tags
         )
 
         # 新規タグの入力
         new_tags = st_tags(
             label='新しいタグを入力:',
             text='エンターキーを押して追加',
-            value=[] if st.session_state.clear_form else [tag for tag in st.session_state.tags if tag not in selected_existing_tags],
+            value=st.session_state.new_tags,
             suggestions=[tag for tag in all_tags if tag not in selected_existing_tags],
             maxtags=10,
             key='new_tag_input'
@@ -166,13 +169,13 @@ def main():
         combined_tags = list(set(selected_existing_tags + new_tags))
         
         # セッション状態の更新
-        if combined_tags != st.session_state.tags:
-            st.session_state.tags = combined_tags
+        st.session_state.tags = selected_existing_tags
+        st.session_state.new_tags = new_tags
         
         # 保存ボタン
         if st.button('レシピを保存'):
             if url and st.session_state.title:  # URLとタイトルが入力されているか確認
-                df, success, message = save_recipe(df, url, st.session_state.title, memo, ','.join(st.session_state.tags), img_url)
+                df, success, message = save_recipe(df, url, st.session_state.title, memo, ','.join(combined_tags), img_url)
                 if success:
                     st.session_state.show_success = True
                     st.session_state.success_message = message
