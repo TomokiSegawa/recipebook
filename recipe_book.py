@@ -73,6 +73,10 @@ def main():
     if 'clear_form' not in st.session_state:
         st.session_state.clear_form = False
 
+    # タブの状態管理
+    if 'current_tab' not in st.session_state:
+        st.session_state.current_tab = "レシピ追加"
+
     # タブの作成
     tab1, tab2 = st.tabs(["レシピ追加", "レシピ一覧"])
 
@@ -123,19 +127,25 @@ def main():
             if url and st.session_state.title:  # URLとタイトルが入力されているか確認
                 df, success, message = save_recipe(df, url, st.session_state.title, memo, ','.join(st.session_state.tags))
                 if success:
-                    st.success(message)
+                    st.session_state.show_success_message = True
+                    st.session_state.success_message = message
                     st.session_state.clear_form = True
-                    st.experimental_rerun()  # ページを再読み込み
                 else:
                     st.error(message)
             else:
                 st.error("URLとタイトルを入力してください。")
+
+        # 成功メッセージの表示
+        if st.session_state.get('show_success_message', False):
+            st.success(st.session_state.success_message)
+            st.session_state.show_success_message = False
 
         # フォームクリアフラグをリセット
         if st.session_state.clear_form:
             st.session_state.clear_form = False
 
     with tab2:
+        st.session_state.current_tab = "レシピ一覧"
         st.header('保存したレシピ一覧')
         
         # タグでフィルタリング（複数選択可能）
