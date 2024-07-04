@@ -5,24 +5,40 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import os
 import base64
+from urllib.parse import urljoin
 
 # CSVファイルのパス
 CSV_FILE = 'recipe_list.csv'
 
-def get_webpage_title(url):
+def get_webpage_info(url):
     try:
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
-        return soup.title.string if soup.title else "タイトルが見つかりません"
-    except:
-        return "URLが無効です"
+        title = soup.title.string if soup.title else "タイトルが見つかりません"
+        
+        # 画像URLの取得
+        img_tag = soup.find('meta', property='og:image')
+        img_url = img_tag['content'] if img_tag else None
+        
+        if not img_url:
+            img_tag = soup.find('img')
+            img_url = img_tag['src'] if img_tag else None
+        
+        # 相対パスを絶対パスに変換
+        if img_url and not img_url.startswith(('http://', 'https://')):
+            img_url = urljoin(url, img_url)
+        
+        return title, img_url
+    except Exception as e:
+        st.error(f"ウェブページの情報取得中にエラーが発生しました: {str(e)}")
+        return "URLが無効です", None
 
 def load_recipes():
     if os.path.exists(CSV_FILE):
         return pd.read_csv(CSV_FILE)
-    return pd.DataFrame(columns=['URL', 'タイトル', 'メモ', 'タグ'])
+    return pd.DataFrame(columns=['URL', 'タイトル', 'メモ', 'タグ', '画像URL'])
 
-def save_recipe(df, url, title, memo, tags):
+def save_recipe(df, url, title, memo, tags, img_url):
     if url in df['URL'].values:
         return df, False, "このURLのレシピはすでに存在しています。"
 
@@ -30,7 +46,8 @@ def save_recipe(df, url, title, memo, tags):
         'URL': [url],
         'タイトル': [title],
         'メモ': [memo],
-        'タグ': [tags]
+        'タグ': [tags],
+        '画像URL': [img_url]
     })
     
     df = pd.concat([df, new_recipe], ignore_index=True)
@@ -75,7 +92,8 @@ def import_csv(uploaded_file, existing_df):
     return existing_df
 
 def main():
-    st.title('レシピ管理アプリ')
+    st.title('ぼくのレシピ帳')
+    st.write("Webサイト上のレシピをまとめて保存するためのアプリです")
 
     # レシピデータの読み込み
     df = load_recipes()
@@ -108,8 +126,15 @@ def main():
         # URL入力
         url = st.text_input('URLを入力してください：', value="" if st.session_state.clear_form else st.session_state.get('url', ""), key='url')
         if url and not st.session_state.clear_form:
-            title = get_webpage_title(url)
+            title, img_url = get_webpage_info(url)
             st.text_input('ウェブページのタイトル：', value=title, key='title')
+            if img_url:
+                try:
+                    st.image(img_url, caption="レシピ画像", use_column_width=True)
+                except Exception as e:
+                    st.warning(f"画像の表示中にエラーが発生しました: {str(e)}")
+            else:
+                st.info("レシピ画像が見つかりませんでした。")
         else:
             st.text_input('ウェブページのタイトル：', value="" if st.session_state.clear_form else st.session_state.get('title', ""), key='title')
         
@@ -147,7 +172,7 @@ def main():
         # 保存ボタン
         if st.button('レシピを保存'):
             if url and st.session_state.title:  # URLとタイトルが入力されているか確認
-                df, success, message = save_recipe(df, url, st.session_state.title, memo, ','.join(st.session_state.tags))
+                df, success, message = save_recipe(df, url, st.session_state.title, memo, ','.join(st.session_state.tags), img_url)
                 if success:
                     st.session_state.show_success = True
                     st.session_state.success_message = message
@@ -179,6 +204,13 @@ def main():
                 st.write(f"URL: {recipe['URL']}")
                 st.write(f"メモ: {recipe['メモ']}")
                 st.write(f"タグ: {recipe['タグ']}")
+                if '画像URL' in recipe and recipe['画像URL']:
+                    try:
+                        st.image(recipe['画像URL'], caption="レシピ画像", use_column_width=True)
+                    except Exception as e:
+                        st.warning(f"画像の表示中にエラーが発生しました: {str(e)}")
+                else:
+                    st.info("このレシピには画像が登録されていません。")
                 
                 col1, col2 = st.columns(2)
                 with col1:
