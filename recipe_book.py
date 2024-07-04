@@ -81,9 +81,9 @@ def main():
         
         # URL入力
         url = st.text_input('URLを入力してください：', value="" if st.session_state.clear_form else st.session_state.get('url', ""), key='url')
-        if url:
+        if url and not st.session_state.clear_form:
             title = get_webpage_title(url)
-            st.text_input('ウェブページのタイトル：', value=title if not st.session_state.clear_form else "", key='title')
+            st.text_input('ウェブページのタイトル：', value=title, key='title')
         else:
             st.text_input('ウェブページのタイトル：', value="" if st.session_state.clear_form else st.session_state.get('title', ""), key='title')
         
