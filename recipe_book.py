@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import os
+import base64
 
 # CSVファイルのパス
 CSV_FILE = 'recipe_list.csv'
@@ -57,6 +58,22 @@ def get_all_tags(df):
             all_tags.update(tag.strip() for tag in tags.split(','))
     return list(all_tags)
 
+def get_csv_download_link(df):
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode()
+    href = f'<a href="data:file/csv;base64,{b64}" download="recipes.csv">CSVファイルをダウンロード</a>'
+    return href
+
+def import_csv(uploaded_file, existing_df):
+    if uploaded_file is not None:
+        imported_df = pd.read_csv(uploaded_file)
+        # URLの重複チェックと統合
+        merged_df = pd.concat([existing_df, imported_df]).drop_duplicates(subset='URL', keep='last')
+        merged_df = merged_df.reset_index(drop=True)
+        merged_df.to_csv(CSV_FILE, index=False)
+        return merged_df
+    return existing_df
+
 def main():
     st.title('レシピ管理アプリ')
 
@@ -78,7 +95,7 @@ def main():
         st.session_state.current_tab = "レシピ追加"
 
     # タブの作成
-    tab1, tab2 = st.tabs(["レシピ追加", "レシピ一覧"])
+    tab1, tab2, tab3 = st.tabs(["レシピ追加", "レシピ一覧", "インポート/エクスポート"])
 
     with tab1:
         st.header('新しいレシピを追加')
@@ -202,6 +219,24 @@ def main():
             if st.button('キャンセル'):
                 del st.session_state.editing
                 st.experimental_rerun()
+
+    with tab3:
+        st.header('レシピのインポート/エクスポート')
+
+        # CSVファイルのインポート
+        st.subheader('CSVファイルからレシピをインポート')
+        uploaded_file = st.file_uploader("CSVファイルを選択してください", type="csv")
+        if st.button('インポート'):
+            if uploaded_file is not None:
+                df = import_csv(uploaded_file, df)
+                st.success('レシピがインポートされました！')
+                st.experimental_rerun()
+            else:
+                st.error('CSVファイルをアップロードしてください。')
+
+        # CSVダウンロードリンク
+        st.subheader('レシピをCSVファイルでエクスポート')
+        st.markdown(get_csv_download_link(df), unsafe_allow_html=True)
 
 if __name__ == '__main__':
     main()
