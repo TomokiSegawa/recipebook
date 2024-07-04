@@ -101,14 +101,23 @@ def main():
     # 全てのタグを取得
     all_tags = get_all_tags(df)
 
+    # セッション状態の初期化
+    if 'show_success' not in st.session_state:
+        st.session_state.show_success = False
+
     # タブの作成
     tab1, tab2, tab3 = st.tabs(["レシピ追加", "レシピ一覧", "インポート/エクスポート"])
 
     with tab1:
         st.header('新しいレシピを追加')
         
+        # 成功メッセージの表示
+        if st.session_state.show_success:
+            st.success("保存しました！")
+            st.session_state.show_success = False
+
         # URL入力
-        url = st.text_input('URLを入力してください：')
+        url = st.text_input('URLを入力してください：', key='url')
         if url:
             title, img_url = get_webpage_info(url)
             st.text_input('ウェブページのタイトル：', value=title, key='title')
@@ -123,12 +132,13 @@ def main():
             st.text_input('ウェブページのタイトル：', key='title')
         
         # メモの入力
-        memo = st.text_area('アレンジメモ：')
+        memo = st.text_area('アレンジメモ：', key='memo')
         
         # タグの入力（既存タグの選択と新規入力の組み合わせ）
         selected_existing_tags = st.multiselect(
             '既存のタグから選択:',
-            options=all_tags
+            options=all_tags,
+            key='existing_tags'
         )
 
         # 新規タグの入力
@@ -149,8 +159,13 @@ def main():
             if url and st.session_state.title:  # URLとタイトルが入力されているか確認
                 df, success, message = save_recipe(df, url, st.session_state.title, memo, ','.join(combined_tags), img_url)
                 if success:
-                    st.success(message)
+                    st.session_state.show_success = True
                     # フォームをクリア
+                    st.session_state.url = ""
+                    st.session_state.title = ""
+                    st.session_state.memo = ""
+                    st.session_state.existing_tags = []
+                    st.session_state.new_tag_input = []
                     st.experimental_rerun()
                 else:
                     st.error(message)
