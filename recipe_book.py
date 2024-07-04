@@ -107,14 +107,10 @@ def main():
         st.session_state.show_success = False
     if 'success_message' not in st.session_state:
         st.session_state.success_message = ""
-    if 'clear_form' not in st.session_state:
-        st.session_state.clear_form = False
-    if 'url' not in st.session_state:
-        st.session_state.url = ""
-    if 'title' not in st.session_state:
-        st.session_state.title = ""
-    if 'memo' not in st.session_state:
-        st.session_state.memo = ""
+    if 'form_data' not in st.session_state:
+        st.session_state.form_data = {"url": "", "title": "", "memo": ""}
+    if 'current_tab' not in st.session_state:
+        st.session_state.current_tab = "レシピ追加"
 
     # 全てのタグを取得し、セッション状態のタグも含める
     all_tags = set(get_all_tags(df))
@@ -124,39 +120,35 @@ def main():
     # タブの作成
     tab1, tab2, tab3 = st.tabs(["レシピ追加", "レシピ一覧", "インポート/エクスポート"])
 
-    with tab1:
-        st.header('新しいレシピを追加')
+    if st.session_state.current_tab == "レシピ追加":
+        tab1.header('新しいレシピを追加')
         
         # 成功メッセージの表示
         if st.session_state.show_success:
-            st.success(st.session_state.success_message)
+            tab1.success(st.session_state.success_message)
             st.session_state.show_success = False
 
         # URL入力
-        url = st.text_input('URLを入力してください：', value="" if st.session_state.clear_form else st.session_state.url, key='url')
-        if url and not st.session_state.clear_form:
+        url = tab1.text_input('URLを入力してください：', value=st.session_state.form_data["url"], key='input_url')
+        if url and url != st.session_state.form_data["url"]:
             title, img_url = get_webpage_info(url)
-            st.text_input('ウェブページのタイトル：', value=title, key='title')
+            st.session_state.form_data["title"] = title
+            tab1.text_input('ウェブページのタイトル：', value=title, key='input_title')
             if img_url:
                 try:
-                    st.image(img_url, caption="レシピ画像", use_column_width=True)
+                    tab1.image(img_url, caption="レシピ画像", use_column_width=True)
                 except Exception as e:
-                    st.warning(f"画像の表示中にエラーが発生しました: {str(e)}")
+                    tab1.warning(f"画像の表示中にエラーが発生しました: {str(e)}")
             else:
-                st.info("レシピ画像が見つかりませんでした。")
+                tab1.info("レシピ画像が見つかりませんでした。")
         else:
-            st.text_input('ウェブページのタイトル：', value="" if st.session_state.clear_form else st.session_state.title, key='title')
+            tab1.text_input('ウェブページのタイトル：', value=st.session_state.form_data["title"], key='input_title')
         
         # メモの入力
-        memo = st.text_area('アレンジメモ：', value="" if st.session_state.clear_form else st.session_state.memo, key='memo')
+        memo = tab1.text_area('アレンジメモ：', value=st.session_state.form_data["memo"], key='input_memo')
         
         # タグの入力（既存タグの選択と新規入力の組み合わせ）
-        if st.session_state.clear_form:
-            st.session_state.tags = []
-            st.session_state.new_tags = []
-
-        # 既存のタグから選択
-        selected_existing_tags = st.multiselect(
+        selected_existing_tags = tab1.multiselect(
             '既存のタグから選択:',
             options=all_tags,
             default=st.session_state.tags
@@ -180,33 +172,31 @@ def main():
         st.session_state.new_tags = new_tags
         
         # 保存ボタン
-        if st.button('レシピを保存'):
-            if url and st.session_state.title:  # URLとタイトルが入力されているか確認
-                df, success, message = save_recipe(df, url, st.session_state.title, memo, ','.join(combined_tags), img_url)
+        if tab1.button('レシピを保存'):
+            if url and st.session_state.form_data["title"]:  # URLとタイトルが入力されているか確認
+                df, success, message = save_recipe(df, url, st.session_state.form_data["title"], memo, ','.join(combined_tags), img_url)
                 if success:
                     st.session_state.show_success = True
                     st.session_state.success_message = message
-                    st.session_state.clear_form = True
+                    st.session_state.form_data = {"url": "", "title": "", "memo": ""}
+                    st.session_state.tags = []
+                    st.session_state.new_tags = []
                     st.experimental_rerun()
                 else:
-                    st.error(message)
+                    tab1.error(message)
             else:
-                st.error("URLとタイトルを入力してください。")
+                tab1.error("URLとタイトルを入力してください。")
 
-        # フォームクリアフラグをリセット
-        if st.session_state.clear_form:
-            st.session_state.clear_form = False
-            st.session_state.url = ""
-            st.session_state.title = ""
-            st.session_state.memo = ""
-            st.session_state.tags = []
-            st.session_state.new_tags = []
+        # フォームデータの更新
+        st.session_state.form_data["url"] = url
+        st.session_state.form_data["title"] = st.session_state.form_data["title"]
+        st.session_state.form_data["memo"] = memo
 
-    with tab2:
-        st.header('保存したレシピ一覧')
+    elif st.session_state.current_tab == "レシピ一覧":
+        tab2.header('保存したレシピ一覧')
         
         # タグでフィルタリング（複数選択可能）
-        selected_tags = st.multiselect('タグでフィルタリング（複数選択可能、AND条件）', all_tags)
+        selected_tags = tab2.multiselect('タグでフィルタリング（複数選択可能、AND条件）', all_tags)
         
         # レシピの表示（AND条件でフィルタリング）
         if not selected_tags:  # タグが選択されていない場合は全てのレシピを表示
@@ -215,7 +205,7 @@ def main():
             filtered_df = df[df['タグ'].apply(lambda x: all(tag in x.split(',') for tag in selected_tags))]
         
         for index, recipe in filtered_df.iterrows():
-            with st.expander(recipe['タイトル']):
+            with tab2.expander(recipe['タイトル']):
                 st.write(f"URL: {recipe['URL']}")
                 st.write(f"メモ: {recipe['メモ']}")
                 st.write(f"タグ: {recipe['タグ']}")
@@ -244,10 +234,10 @@ def main():
 
         # 編集モード
         if 'editing' in st.session_state:
-            st.header('レシピの編集')
-            edit_url = st.text_input('URL:', value=st.session_state.edit_url)
-            edit_title = st.text_input('タイトル:', value=st.session_state.edit_title)
-            edit_memo = st.text_area('メモ:', value=st.session_state.edit_memo)
+            tab2.header('レシピの編集')
+            edit_url = tab2.text_input('URL:', value=st.session_state.edit_url)
+            edit_title = tab2.text_input('タイトル:', value=st.session_state.edit_title)
+            edit_memo = tab2.text_area('メモ:', value=st.session_state.edit_memo)
             edit_tags = st_tags(
                 label='タグ:',
                 text='エンターキーを押して追加',
@@ -257,33 +247,41 @@ def main():
                 key='edit_tags'
             )
 
-            if st.button('更新'):
+            if tab2.button('更新'):
                 df = update_recipe(df, st.session_state.editing, edit_url, edit_title, edit_memo, ','.join(edit_tags))
-                st.success('レシピが更新されました。')
+                tab2.success('レシピが更新されました。')
                 del st.session_state.editing
                 st.experimental_rerun()
 
-            if st.button('キャンセル'):
+            if tab2.button('キャンセル'):
                 del st.session_state.editing
                 st.experimental_rerun()
 
-    with tab3:
-        st.header('レシピのインポート/エクスポート')
+    elif st.session_state.current_tab == "インポート/エクスポート":
+        tab3.header('レシピのインポート/エクスポート')
 
         # CSVファイルのインポート
-        st.subheader('CSVファイルからレシピをインポート')
-        uploaded_file = st.file_uploader("CSVファイルを選択してください", type="csv")
-        if st.button('インポート'):
+        tab3.subheader('CSVファイルからレシピをインポート')
+        uploaded_file = tab3.file_uploader("CSVファイルを選択してください", type="csv")
+        if tab3.button('インポート'):
             if uploaded_file is not None:
                 df = import_csv(uploaded_file, df)
-                st.success('レシピがインポートされました！')
+                tab3.success('レシピがインポートされました！')
                 st.experimental_rerun()
             else:
-                st.error('CSVファイルをアップロードしてください。')
+                tab3.error('CSVファイルをアップロードしてください。')
 
         # CSVダウンロードリンク
-        st.subheader('レシピをCSVファイルでエクスポート')
-        st.markdown(get_csv_download_link(df), unsafe_allow_html=True)
+        tab3.subheader('レシピをCSVファイルでエクスポート')
+        tab3.markdown(get_csv_download_link(df), unsafe_allow_html=True)
+
+    # タブの状態を更新
+    if tab1:
+        st.session_state.current_tab = "レシピ追加"
+    elif tab2:
+        st.session_state.current_tab = "レシピ一覧"
+    elif tab3:
+        st.session_state.current_tab = "インポート/エクスポート"
 
 if __name__ == '__main__':
     main()
