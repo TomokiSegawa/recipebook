@@ -106,6 +106,8 @@ def main():
         st.session_state.show_success = False
     if 'clear_form' not in st.session_state:
         st.session_state.clear_form = False
+    if 'new_tags' not in st.session_state:
+        st.session_state.new_tags = []
 
     # タブの作成
     tab1, tab2, tab3 = st.tabs(["レシピ追加", "レシピ一覧", "インポート/エクスポート"])
@@ -133,6 +135,7 @@ def main():
         else:
             st.text_input('ウェブページのタイトル：', value="" if st.session_state.clear_form else st.session_state.get('title', ""), key='title')
         
+        
         # メモの入力
         memo = st.text_area('アレンジメモ：', value="" if st.session_state.clear_form else st.session_state.get('memo', ""), key='memo')
         
@@ -148,7 +151,7 @@ def main():
         new_tags = st_tags(
             label='新しいタグを入力:',
             text='エンターキーを押して追加',
-            value=[] if st.session_state.clear_form else st.session_state.get('new_tag_input', []),
+            value=[] if st.session_state.clear_form else st.session_state.new_tags,
             suggestions=[tag for tag in all_tags if tag not in selected_existing_tags],
             maxtags=10,
             key='new_tag_input'
@@ -157,6 +160,9 @@ def main():
         # 既存のタグと新規タグを組み合わせる
         combined_tags = list(set(selected_existing_tags + new_tags))
         
+        # セッション状態の更新
+        st.session_state.new_tags = new_tags
+
         # 保存ボタン
         if st.button('レシピを保存'):
             if url and st.session_state.title:  # URLとタイトルが入力されているか確認
@@ -164,6 +170,7 @@ def main():
                 if success:
                     st.session_state.show_success = True
                     st.session_state.clear_form = True
+                    st.session_state.new_tags = []  # 新規タグをクリア
                     st.experimental_rerun()
                 else:
                     st.error(message)
@@ -173,7 +180,7 @@ def main():
         # フォームクリアフラグをリセット
         if st.session_state.clear_form:
             st.session_state.clear_form = False
-
+    
     with tab2:
         st.header('保存したレシピ一覧')
         
