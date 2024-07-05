@@ -106,8 +106,8 @@ def main():
         st.session_state.show_success = False
     if 'clear_form' not in st.session_state:
         st.session_state.clear_form = False
-    if 'new_tags' not in st.session_state:
-        st.session_state.new_tags = []
+    if 'form_key' not in st.session_state:
+        st.session_state.form_key = 0
 
     # タブの作成
     tab1, tab2, tab3 = st.tabs(["レシピ追加", "レシピ一覧", "インポート/エクスポート"])
@@ -120,11 +120,16 @@ def main():
             st.success("保存しました！")
             st.session_state.show_success = False
 
+        # フォームのキーを更新（フォームをリセットするため）
+        if st.session_state.clear_form:
+            st.session_state.form_key += 1
+            st.session_state.clear_form = False
+
         # URL入力
-        url = st.text_input('URLを入力してください：', value="" if st.session_state.clear_form else st.session_state.get('url', ""), key='url')
-        if url and not st.session_state.clear_form:
+        url = st.text_input('URLを入力してください：', key=f'url_{st.session_state.form_key}')
+        if url:
             title, img_url = get_webpage_info(url)
-            st.text_input('ウェブページのタイトル：', value=title, key='title')
+            st.text_input('ウェブページのタイトル：', value=title, key=f'title_{st.session_state.form_key}')
             if img_url:
                 try:
                     st.image(img_url, caption="レシピ画像", use_column_width=True)
@@ -133,44 +138,38 @@ def main():
             else:
                 st.info("レシピ画像が見つかりませんでした。")
         else:
-            st.text_input('ウェブページのタイトル：', value="" if st.session_state.clear_form else st.session_state.get('title', ""), key='title')
-        
+            st.text_input('ウェブページのタイトル：', key=f'title_{st.session_state.form_key}')
         
         # メモの入力
-        memo = st.text_area('アレンジメモ：', value="" if st.session_state.clear_form else st.session_state.get('memo', ""), key='memo')
+        memo = st.text_area('アレンジメモ：', key=f'memo_{st.session_state.form_key}')
         
         # タグの入力（既存タグの選択と新規入力の組み合わせ）
         selected_existing_tags = st.multiselect(
             '既存のタグから選択:',
             options=all_tags,
-            default=[] if st.session_state.clear_form else st.session_state.get('existing_tags', []),
-            key='existing_tags'
+            key=f'existing_tags_{st.session_state.form_key}'
         )
 
         # 新規タグの入力
         new_tags = st_tags(
             label='新しいタグを入力:',
             text='エンターキーを押して追加',
-            value=[] if st.session_state.clear_form else st.session_state.new_tags,
+            value=[],
             suggestions=[tag for tag in all_tags if tag not in selected_existing_tags],
             maxtags=10,
-            key='new_tag_input'
+            key=f'new_tag_input_{st.session_state.form_key}'
         )
 
         # 既存のタグと新規タグを組み合わせる
         combined_tags = list(set(selected_existing_tags + new_tags))
         
-        # セッション状態の更新
-        st.session_state.new_tags = new_tags
-
         # 保存ボタン
-        if st.button('レシピを保存'):
-            if url and st.session_state.title:  # URLとタイトルが入力されているか確認
-                df, success, message = save_recipe(df, url, st.session_state.title, memo, ','.join(combined_tags), img_url)
+        if st.button('レシピを保存', key=f'save_button_{st.session_state.form_key}'):
+            if url and st.session_state[f'title_{st.session_state.form_key}']:  # URLとタイトルが入力されているか確認
+                df, success, message = save_recipe(df, url, st.session_state[f'title_{st.session_state.form_key}'], memo, ','.join(combined_tags), img_url)
                 if success:
                     st.session_state.show_success = True
                     st.session_state.clear_form = True
-                    st.session_state.new_tags = []  # 新規タグをクリア
                     st.experimental_rerun()
                 else:
                     st.error(message)
