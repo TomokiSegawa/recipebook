@@ -60,10 +60,10 @@ def save_recipe(url, title, memo, tags, img_url):
     sheet.append_row(new_row)
     return True, "レシピが保存されました！"
 
-def update_recipe(index, url, title, memo, tags):
+def update_recipe(index, url, title, memo, tags, img_url):
     sheet = connect_to_sheet()
     row = index + 2  # ヘッダー行とインデックスの調整
-    sheet.update(f'A{row}:E{row}', [[url, title, memo, tags, '']])
+    sheet.update(f'A{row}:E{row}', [[url, title, memo, tags, img_url]])
 
 def delete_recipe(index):
     sheet = connect_to_sheet()
@@ -133,7 +133,7 @@ def main():
             key=f'existing_tags_{st.session_state.form_key}'
         )
 
-        #説明文の追加
+        #新規タグ入力の説明文
         st.caption("新しいタグを入力し、Enterキーを押して追加してください。追加後は手動で入力欄をクリアしてください。")
 
         # 新規タグの入力
@@ -218,7 +218,9 @@ def main():
             )
 
             if st.button('更新'):
-                update_recipe(st.session_state.editing, edit_url, edit_title, edit_memo, ','.join(edit_tags))
+                # 現在の画像URLを取得
+                current_img_url = df.iloc[st.session_state.editing]['画像URL']
+                update_recipe(st.session_state.editing, edit_url, edit_title, edit_memo, ','.join(edit_tags), current_img_url)
                 st.success('レシピが更新されました。')
                 del st.session_state.editing
                 st.experimental_rerun()
