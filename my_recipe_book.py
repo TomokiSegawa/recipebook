@@ -133,6 +133,9 @@ def main():
             key=f'existing_tags_{st.session_state.form_key}'
         )
 
+        #説明文の追加
+        st.caption("新しいタグを入力し、Enterキーを押して追加してください。追加後は手動で入力欄をクリアしてください。")
+
         # 新規タグの入力
         new_tags = st_tags(
             label='新しいタグを入力:',
