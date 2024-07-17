@@ -1,5 +1,7 @@
-streamlit
-requests
-beautifulsoup4
-pandas
-streamlit-tags
+streamlit==1.33.0
+requests==2.31.0
+beautifulsoup4==4.11.2
+pandas==2.0.3
+streamlit-tags==1.2.8
+google-auth==2.27.0
+gspread==5.7.2
