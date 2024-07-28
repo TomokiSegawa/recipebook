@@ -176,8 +176,15 @@ def main():
             filtered_df = df
         else:
             filtered_df = df[df['タグ'].apply(lambda x: all(tag in str(x).split(',') for tag in selected_tags))]
-        
-        for index, recipe in filtered_df.iterrows():
+
+        # ページネーションの実装
+        items_per_page = 5
+        n_pages = len(filtered_df) // items_per_page + (1 if len(filtered_df) % items_per_page > 0 else 0)
+        page = st.number_input('ページ', min_value=1, max_value=n_pages, value=1)
+        start_idx = (page - 1) * items_per_page
+        end_idx = start_idx + items_per_page
+            
+        for index, recipe in filtered_df.iloc[start_idx:end_idx].iterrows():
             with st.expander(recipe['タイトル']):
                 st.write(f"URL: {recipe['URL']}")
                 st.write(f"メモ: {recipe['メモ']}")
@@ -204,6 +211,19 @@ def main():
                         delete_recipe(index)
                         st.success('レシピが削除されました。')
                         st.experimental_rerun()
+          
+        # ページナビゲーション
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col1:
+            if st.button('前のページ', disabled=(page == 1)):
+                st.session_state.page = page - 1
+                st.experimental_rerun()
+        with col2:
+            st.write(f"ページ {page}/{n_pages}")
+        with col3:
+            if st.button('次のページ', disabled=(page == n_pages)):
+                st.session_state.page = page + 1
+                st.experimental_rerun()
 
         # 編集モード
         
