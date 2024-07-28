@@ -91,6 +91,9 @@ def main():
         st.session_state.clear_form = False
     if 'form_key' not in st.session_state:
         st.session_state.form_key = 0
+    if 'page' not in st.session_state:
+        st.session_state.page = 1
+
 
     # タブの作成
     tab1, tab2 = st.tabs(["レシピ追加", "レシピ一覧"])
@@ -180,7 +183,7 @@ def main():
         # ページネーションの実装
         items_per_page = 5
         n_pages = len(filtered_df) // items_per_page + (1 if len(filtered_df) % items_per_page > 0 else 0)
-        page = st.number_input('ページ', min_value=1, max_value=n_pages, value=1)
+        page = st.session_state.page
         start_idx = (page - 1) * items_per_page
         end_idx = start_idx + items_per_page
             
@@ -216,13 +219,13 @@ def main():
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
             if st.button('前のページ', disabled=(page == 1)):
-                st.session_state.page = page - 1
+                st.session_state.page = max(1, st.session_state.page - 1)
                 st.experimental_rerun()
         with col2:
             st.write(f"ページ {page}/{n_pages}")
         with col3:
             if st.button('次のページ', disabled=(page == n_pages)):
-                st.session_state.page = page + 1
+                st.session_state.page = min(n_pages, st.session_state.page + 1)
                 st.experimental_rerun()
 
         # 編集モード
