@@ -134,7 +134,7 @@ def main():
         )
 
         #新規タグ入力の説明文
-        st.caption("新しいタグを入力し、Enterキーを押して追加してください。追加後は手動で入力欄をクリアしてください。")
+        st.caption("新しいタグを入力し、Enterキーを押して追加してください。")
 
         # 新規タグの入力
         new_tags = st_tags(
@@ -206,25 +206,44 @@ def main():
                         st.experimental_rerun()
 
         # 編集モード
+        
         if 'editing' in st.session_state:
             st.header('レシピの編集')
             edit_url = st.text_input('URL:', value=st.session_state.edit_url)
             edit_title = st.text_input('タイトル:', value=st.session_state.edit_title)
             edit_memo = st.text_area('メモ:', value=st.session_state.edit_memo)
-            edit_tags = st.multiselect(
-                'タグ:',
+            
+            # 既存のタグを選択
+            selected_existing_tags = st.multiselect(
+                '既存のタグから選択:',
                 options=all_tags,
                 default=st.session_state.edit_tags
             )
 
+            # 新規タグ入力の説明文
+            st.caption("新しいタグを入力し、Enterキーを押して追加してください。追加後は手動で入力欄をクリアしてください。")
+        
+            # 新規タグの入力
+            new_tags = st_tags(
+                label='新しいタグを入力:',
+                text='エンターキーを押して追加',
+                value=[],
+                suggestions=[tag for tag in all_tags if tag not in selected_existing_tags],
+                maxtags=10,
+                key=f'edit_new_tag_input_{st.session_state.editing}'
+            )
+        
+            # 既存のタグと新規タグを組み合わせる
+            combined_tags = list(set(selected_existing_tags + new_tags))
+        
             if st.button('更新'):
                 # 現在の画像URLを取得
                 current_img_url = df.iloc[st.session_state.editing]['画像URL']
-                update_recipe(st.session_state.editing, edit_url, edit_title, edit_memo, ','.join(edit_tags), current_img_url)
+                update_recipe(st.session_state.editing, edit_url, edit_title, edit_memo, ','.join(combined_tags), current_img_url)
                 st.success('レシピが更新されました。')
                 del st.session_state.editing
                 st.experimental_rerun()
-
+        
             if st.button('キャンセル'):
                 del st.session_state.editing
                 st.experimental_rerun()
