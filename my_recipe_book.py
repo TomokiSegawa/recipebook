@@ -181,7 +181,7 @@ def main():
             filtered_df = df[df['タグ'].apply(lambda x: all(tag in str(x).split(',') for tag in selected_tags))]
 
         # ページネーションの実装
-        items_per_page = 5
+        items_per_page = 50
         n_pages = len(filtered_df) // items_per_page + (1 if len(filtered_df) % items_per_page > 0 else 0)
         page = st.session_state.page
         start_idx = (page - 1) * items_per_page
